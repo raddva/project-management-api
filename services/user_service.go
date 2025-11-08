@@ -11,6 +11,9 @@ import (
 
 type UserService interface {
 	Register(user *models.User) error
+	Login(email, password string) (*models.User, error)
+	GetByID(id uint) (*models.User, error)
+	GetByPublicID(id string) (*models.User, error)
 }
 
 type userService struct {
@@ -22,11 +25,6 @@ func NewUserService(repo repositories.UserRepository) UserService {
 }
 
 func (s *userService) Register(user *models.User) error {
-	//kita harus mengecek email yang terdaftar apakah sudah dipakai atau belum
-	//hasing password
-	//set role
-	//simpan user
-
 	existingUser, _ := s.repo.FindByEmail(user.Email)
 	if existingUser.InternalID != 0 {
 		return errors.New("email already registered")
@@ -55,4 +53,12 @@ func (s *userService) Login(email, password string) (*models.User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *userService) GetByID(id uint) (*models.User, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *userService) GetByPublicID(id string) (*models.User, error) {
+	return s.repo.FindByPublicID(id)
 }
