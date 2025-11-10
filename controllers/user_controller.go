@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"github.com/raddva/projeqtor-api-go/models"
 	"github.com/raddva/projeqtor-api-go/services"
@@ -107,4 +108,35 @@ func (c *UserController) GetUsersPaginated(ctx *fiber.Ctx) error {
 	}
 
 	return utils.PaginationSuccess(ctx, "Users Retrieved Successfully", userResp, meta)
+}
+
+func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	publicID, err := uuid.Parse(id)
+	if err != nil {
+		return utils.BadRequest(ctx, "Invalid User ID Format", err.Error())
+	}
+
+	var user models.User
+	if err := ctx.BodyParser(&user); err != nil {
+		return utils.BadRequest(ctx, "Failed to Parse Request Body", err.Error())
+	}
+	user.PublicID = publicID
+
+	if err := c.service.Update(&user); err != nil {
+		return utils.BadRequest(ctx, "Failed to Update User", err.Error())
+	}
+
+	userUpdated, err := c.service.GetByPublicID(id)
+	if err != nil {
+		return utils.InternalServerError(ctx, "Failed to Retrieve Updated User", err.Error())
+	}
+
+	var userResp models.User
+	err = copier.Copy(&userResp, &userUpdated)
+	if err != nil {
+		return utils.InternalServerError(ctx, "Failed to Parsing Data", err.Error())
+	}
+
+	return utils.Success(ctx, "User Updated Successfully", userResp)
 }
