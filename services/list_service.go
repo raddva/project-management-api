@@ -1,9 +1,12 @@
 package services
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/raddva/projeqtor-api-go/models"
 	"github.com/raddva/projeqtor-api-go/repositories"
+	"github.com/raddva/projeqtor-api-go/utils"
 )
 
 type listService struct {
@@ -25,4 +28,32 @@ type ListService interface {
 	Update(list *models.List) error
 	Delete(id uint) error
 	UpdatePositions(boardPublicID string, positions []uuid.UUID) error
+}
+
+func NewListService (listRepo repositories.ListRepository, boardRepo repositories.BoardRepository, listPosRepo repositories.ListPositionRepository) ListService{
+	return &listService{listRepo, boardRepo, listPosRepo}
+}
+
+func (s *listService) GetByBoardID(boardPublicID string) (*ListWithOrder, error) {
+	_, err := s.boardRepo.FindByPublicID(boardPublicID)
+	if err != nil {
+		return nil, errors.New("board not found")
+	}
+
+	position, err := s.listPosRepo.GetListOrder(boardPublicID)
+	if err != nil {
+		return nil, errors.New("failed to fetch list order:" + err.Error())
+	}
+
+	lists, err := s.listRepo.FindByBoardID(boardPublicID)
+	if err != nil {
+		return nil, errors.New("failed to get list:" + err.Error())
+	}
+
+	orderedList := utils.SortListsByPosition(lists,position)
+
+	return &ListWithOrder{
+		Positions: position,
+		Lists: orderedList,
+	}, nil
 }
